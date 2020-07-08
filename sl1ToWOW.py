@@ -2,7 +2,6 @@
 # -*- coding: UTF-8 -*-
 
 #    Copyright © 2020 Polyakov Sergey (PolSerg). All rights reserved.
-#    e-mail: polserg12x@mail.ru
 
 #    This program is free software: you can redistribute it and/or modify
 #    it under the terms of the GNU General Public License as published by
@@ -37,6 +36,7 @@ import os, zipfile
 from bitarray import bitarray
 import configparser
 import sys
+import shutil
 
 def fwrite(fh, imgFILENAME):
     im=Image.open(imgFILENAME).convert('1')
@@ -59,15 +59,15 @@ if len(sys.argv)!=2 or len(sys.argv)==2 and sys.argv[1]=="-h":
     Usage: sl1ToWOW.py file[.sl1]'''
     sys.exit (1)
 
-filename=sys.argv[1]
-if filename.find(".sl1")==-1:
-    filename+=".sl1"
+infilename=sys.argv[1]
+if infilename.find(".sl1")==-1:
+    infilename+=".sl1"
 
-zipFile = zipfile.ZipFile(filename, 'r')
-zipFile.extractall(filename+"_sl1")
+zipFile = zipfile.ZipFile(infilename, 'r')
+zipFile.extractall(infilename+"_sl1")
 zipFile.close()
 
-files = os.listdir(filename+"_sl1") 
+files = os.listdir(infilename+"_sl1") 
 images = filter(lambda x: x.endswith('.png'), files)
 images.sort()
 
@@ -105,7 +105,7 @@ G1 Z10 F[upSpeed];
 M18;
 '''
 
-with open(os.path.join(filename+"_sl1","config.ini")) as f:
+with open(os.path.join(infilename+"_sl1","config.ini")) as f:
     file_content = u'[dummy_section]\n' + f.read()
 
 config_parser = configparser.RawConfigParser()
@@ -121,7 +121,7 @@ layerHeight=config_parser.getfloat("dummy_section","layerHeight") #0.1
 lifting_height=5
 lowering_height=lifting_height-layerHeight
 
-with open(filename+".wow", 'wb') as fh:
+with open(infilename+".wow", 'wb') as fh:
      
     fh.write(strStart.replace('''[lifting_height]''',str(lifting_height)).replace('''[lowering_height]''',str(lowering_height)).replace('''[layerTime]''',str(startLayerTime)).replace('''[upSpeed]''',str(upSpeed)).replace('''[downSpeed]''',str(downSpeed)))
     strNewLayer=""
@@ -129,10 +129,13 @@ with open(filename+".wow", 'wb') as fh:
     for filename in images:
         nLayerTyme=layerTime if layerNumber>startlayers+1 else startLayerTime
         fh.write(strNewLayer.replace('''[lifting_height]''',str(lifting_height)).replace('''[lowering_height]''',str(lowering_height)).replace('''[layerNumber]''',str(layerNumber)).replace('''[layerTime]''',str(nLayerTyme)).replace('''[upSpeed]''',str(upSpeed)).replace('''[downSpeed]''',str(downSpeed)))
-        fwrite(fh, os.path.join("pr_archive",filename))
+        fwrite(fh, os.path.join(infilename+"_sl1",filename))
         strNewLayer=strLayer
         layerNumber+=1
     
 
     fh.write(strEnd.replace('''[upSpeed]''',str(upSpeed)).replace('''[downSpeed]''',str(downSpeed)).replace('''[layerTime]''',str(layerTime)))
     fh.close()    
+
+path = os.path.join(os.path.abspath(os.path.dirname(__file__)), infilename+"_sl1")
+shutil.rmtree(path)
